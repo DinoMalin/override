@@ -27,7 +27,7 @@ get_flag() {
 		LEVEL=$(($LEVEL-1))
 	fi
 
-	head $PREFIX$LEVEL/expl | head -n 1 | awk '{print $2}'
+	head ${PREFIX}0${LEVEL}/expl | head -n 1 | awk '{print $2}'
 }
 
 get_binary() {
@@ -44,8 +44,8 @@ get_binary() {
 		exit 1
 	fi
 
-	mkdir -p $PREFIX$LEVEL
-	sshpass -p $FLAG scp -P 4242 $PREFIX$LEVEL@$IP:$PREFIX$LEVEL $PREFIX$LEVEL
+	mkdir -p ${PREFIX}0${LEVEL}
+	sshpass -p $FLAG scp -P 4242 ${PREFIX}0${LEVEL}@$IP:${PREFIX}0${LEVEL} ${PREFIX}0${LEVEL}
 }
 
 if [ $1 = "connect" ]; then
@@ -66,7 +66,7 @@ if [ $1 = "connect" ]; then
 		PREFIX="bonus"
 	fi
 
-	sshpass -p $FLAG ssh $IP -p 4242 -l $PREFIX$LEVEL
+	sshpass -p $FLAG ssh $IP -p 4242 -l ${PREFIX}0${LEVEL}
 	exit 0
 fi
 
@@ -90,3 +90,12 @@ if [ $1 = "copy" ]; then
 	exit 0
 fi
 
+if [ $1 = "pw" ]; then
+	if [ -z $2 ]; then
+		echo "usage: $0 pw <level>" 1>&2
+		exit 1
+	fi
+
+	echo $(get_flag $2)
+	exit 0
+fi
