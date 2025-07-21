@@ -1,0 +1,30 @@
+flag: kgv3tkEb9h2mLkRsPkXRfc2mHbjMxQzvb2FrgKkf
+
+This level present a little context around a hash method.
+There is a base hash, that looks like this:
+
+    unsigned char password[] = {
+        0x51, 0x7d, 0x7c, 0x75,  // 'Q', '}', '|', 'u'
+        0x60, 0x73, 0x66, 0x67,  // '`', 's', 'f', 'g'
+        0x7e, 0x73, 0x66, 0x7b,  // '~', 's', 'f', '{'
+        0x7d, 0x7c, 0x61, 0x33,  // '}', '|', 'a', '3'
+        0x00                     // null terminator
+    };
+
+The program xor a key to this hash and checks if the result is "Congratulations!".
+
+The xor is a symetrical operation. So if we just re-xor every byte of the hash against
+every byte of "Congratulations", we should get the password of the program.
+I added a python script to calculate it: The key is 18.
+
+We got to pass the key to the program somehow. The function decrypt which contains the
+hash is in a function test which takes 2 parameters. The key must be X=param2-param1.
+
+Reading the disassembled code, we see that the value 0x1337d00d is passed in the stack,
+so used in the function as the second parameter. The value passed as first parameter is
+received from a scanf("%d"), so we just have to subtract 18 from 0x1337d00d and pass its
+decimal version to the password field !
+
+param1 = 0x1337d00d - 18
+	   = 0x1337cffb
+	   = 322424827
