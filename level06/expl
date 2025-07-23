@@ -1,0 +1,51 @@
+flag: GbcPDRgsFK77LNnnuh7QyFYA2942Gp8yKj9KrWD8
+
+In this level, the program calls a function auth to which it passes a username and a 
+serial number.
+The username is a string, the serial is an unsigned int (obtained via scanf).
+
+If the auth function returns 0, the program opens a shell.
+The auth function looks like this:
+
+int auth(char *param, uint key) {
+	param[strcspn(param, "\n")] = '\0';
+	int len = strnlen(param, 32);
+
+	if (len < 6) {
+		return 1;
+	}
+
+	bool debugged = ptrace(PTRACE_ME);
+	if (debugged == -1) {
+		puts("Tampering detected");
+		return 1;
+	}
+
+	uint res = ((int)param[3] ^ 4919) + 0x5eeded;
+
+	for (int i = 0; i < len; i++) {
+		if (param[i] < ' ') {
+			return 1;
+		}
+
+		res += (param[i] ^ res) % 0x539;
+	}
+
+	if (key == res) {
+		return 0;
+	}
+
+	return 1;
+}
+
+I pass this to an online compiler and I just add a printf("%u\n", res) before the
+verification.
+I give to the function a string larger than 6 characters that does not contain any
+character that has an ascii value inferior to 32 (' ').
+For the string "dinomalin", the function calculate 6235754.
+I now know the serial that will return 0 for this string, so I enter both values:
+
+> username: dinomalin
+> serial: 6235754
+
+> cat /home/users/level07/.pass
