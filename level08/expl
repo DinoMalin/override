@@ -49,7 +49,7 @@ int main(int ac, char **av) {
 This level starts with a relative path and not an absolute one, so we can recreate the
 architecture expected by the program somewhere else.
 
-> mkdir -p /tmp/level08/backups/home/users/level09; cd /tmp/level08; /home/users/level08/level08 /home/users/level09.pass
+> mkdir -p /tmp/level08/backups/home/users/level09; cd /tmp/level08; /home/users/level08/level08 /home/users/level09/.pass
 
 The program read the flag and wrote it in the file /tmp/level08/backups/home/users/level09/.pass
 The program being setgid and the group of the program being users, group in which
